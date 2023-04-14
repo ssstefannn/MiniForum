@@ -61,12 +61,60 @@ def logout_the_user(arguments, client_socket):
             response = f'Successfully logged out!'
             send(client_socket, response)
             return
+        
+def chat_with_user(arguments, client_socket):
+    if len(arguments) != 3:
+        response = f'Usage: /chat <username>'
+        send(client_socket, response)
+        return
+    username2 = arguments[1]
+    session_id = arguments[2]
+    user1 = get_user_by_session_id(session_id)
+    latest_messages = get_latest_messages(user1.username, username2)
+    send(client_socket, latest_messages)
+    user1.chatting_with_user = True
+    return
+    
+def get_user_by_session_id(session_id):
+    for user in users:
+        if user.session_id == session_id:
+            return user
+        
+def get_latest_messages(username1, username2):
+    latest_messages = ''
+    for message in messages:
+        if message.src == username1\
+        or message.dst == username1\
+        or message.src == username2\
+        or message.dst == username2:
+            latest_messages = f'{latest_messages}{message.src}:{message.content}\n'
+    return latest_messages
+
+def send_message(data, client_socket):
+    user_src_session_id = data.split()[-1]
+    user_src = get_user_by_session_id(user_src_session_id)
+    user_dst = user_src.currently_chatting_with
+    messages.append(Message(user_src, user_dst, data.split()[0:-2]))
+    send_to_user_dst_if_chatting(user_src, user_dst, data.split()[0:-2])
+
+def send_to_user_dst_if_chatting(user_src, user_dst, message_content):
+    if user_dst.currently_chatting_with.username == user_src.username:
+        send(user_dst.client_socket, message_content)
+
+        
+class Message:
+    def __init__(self, src, dst, content):
+        self.src = src
+        self.dst = dst
+        self.content = content
 
 class User:
     def __init__(self, username, password):
         self.username = username
         self.password = password
         self.session_id = 0
+        self.currently_chatting_with = None
+        self.client_socket = None
 
 def send(client_socket, response):
     client_socket.sendall(response.encode('utf-8'))
@@ -97,6 +145,7 @@ server_socket.listen(1)
 print('Server listening on port 6666...')
 
 users = []
+messages = []
 
 while True:
     client_socket, address = server_socket.accept()
@@ -128,8 +177,8 @@ while True:
             x = 0
         elif command == '/chat':
             # chat with a particular user
+            chat_with_user(arguments, client_socket)
             x = 0
         else:
-            response = f'Unknown command {command}'
-            client_socket.sendall(response.encode('utf-8'))
+            send_message(data, client_socket)
     client_socket.close()
