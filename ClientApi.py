@@ -38,3 +38,15 @@ class ClientApi:
         client_socket.sendall(data.encode('utf-8'))
         response = client_socket.recv(1024).decode('utf-8')
         print(response)
+
+    def get_news(self, data, client_socket):
+        data = f'{data} {self.session_id}'
+        client_socket.sendall(data.encode('utf-8'))
+        response = client_socket.recv(65536).decode('utf-8')
+        print(response)
+
+    def get_weather(self, data, client_socket):
+        data = f'{data} {self.session_id}'
+        client_socket.sendall(data.encode('utf-8'))
+        response = client_socket.recv(65536).decode('utf-8')
+        print(response)
